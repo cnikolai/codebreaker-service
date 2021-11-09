@@ -19,6 +19,7 @@ import javax.persistence.TemporalType;
 import org.hibernate.annotations.CreationTimestamp;
 
 //tell hybernate it is an entity
+@SuppressWarnings("JpaDataSourceORMInspection") //not bother looking for datasource for annotations
 @Entity
 @Table(name = "user_profile",
     indexes = {
@@ -27,7 +28,7 @@ import org.hibernate.annotations.CreationTimestamp;
 public class User {
 
   @Id //marks as primary key field
-  @GeneratedValue //autogenerates field for us, can only go on a primary key.
+  @GeneratedValue //autogenerates value for us, can only go on a primary key.
   @Column(name = "user_id", updatable = false, columnDefinition = "UUID")
   //if we ever use hybernate to try to update this field, gives an error, tell hybernamet what datatype it is
   private UUID id;
