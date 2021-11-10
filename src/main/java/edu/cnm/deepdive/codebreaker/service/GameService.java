@@ -1,11 +1,15 @@
 package edu.cnm.deepdive.codebreaker.service;
 
 import edu.cnm.deepdive.codebreaker.model.dao.GameRepository;
+import edu.cnm.deepdive.codebreaker.model.dao.GuessRepository;
 import edu.cnm.deepdive.codebreaker.model.entity.Game;
+import edu.cnm.deepdive.codebreaker.model.entity.Guess;
 import edu.cnm.deepdive.codebreaker.model.entity.User;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,31 +17,34 @@ import org.springframework.stereotype.Service;
 @Service //Spring creates instances of class, not our code.
 public class GameService {
 
-  private final GameRepository repository;
+  private final GameRepository gameRepository;
+  private final GuessRepository guessRepository;
   private final Random rng;
 
   @Autowired //no spring component that is a random.
-  public GameService(GameRepository repository, Random rng) {
-    this.repository = repository;
+  public GameService(GameRepository repository,
+      GuessRepository guessRepository, Random rng) {
+    this.gameRepository = repository;
+    this.guessRepository = guessRepository;
     this.rng = rng;
   }
 
   public Optional<Game> get(UUID id) {
-    return repository.findById(id);
+    return gameRepository.findById(id);
   }
 
   public Optional<Game> get(UUID key, User user) {
-    return repository.findByExternalKeyAndUser(key, user);
+    return gameRepository.findByExternalKeyAndUser(key, user);
   }
 
   public void delete(UUID id) {
-    repository.deleteById(id);
+    gameRepository.deleteById(id);
   }
 
   public void delete(UUID key, User user) {
-    repository
+    gameRepository
         .findByExternalKeyAndUser(key, user)
-        .ifPresent(repository::delete);
+        .ifPresent(gameRepository::delete);
   }
 
   public Game startGame(String pool, int length, User user) {
@@ -45,30 +52,84 @@ public class GameService {
     String code = generateCode(codePoints, length);
     Game game = new Game();
     game.setUser(user);
-    game.setPool(new String(codePoints, 0 , codePoints.length));
+    game.setPool(new String(codePoints, 0, codePoints.length));
     game.setText(code);
     game.setLength(length);
-    game.setPoolSize(codePoints.length);// not pool length because that gives us chars, and emojjis are 2 charrs
-    return repository.save(game);
+    game.setPoolSize(
+        codePoints.length);// not pool length because that gives us chars, and emojjis are 2 charrs
+    return gameRepository.save(game);
   }
 
-  //about failing, not striping
+  public Guess processGuess(UUID gameKey, Guess guess, User user) {
+    //if there is no game with this id belonging to this user
+    return gameRepository
+        .findByExternalKeyAndUser(gameKey, user)
+        .map(
+            (game) -> {// on an optional method, map method is skipped when there is no object returned by optional (i.e. a game)
+              // int[] codeCodePoints = game.getPool().codePoints().toArray();//hashSet searches in constant time - uses a hash table, organizing contents such that can access them very quickly.
+              //validate guess.
+              //is the guess the wrong length?
+              //does the guess have any characters that aren't in the pool?
+              int[] guessCodePoints = preprocessGuess(guess, game);
+              int[] codeCodePoints = game
+                  .getText()
+                  .codePoints()
+                  .toArray();
+              computeMatches(guess, guessCodePoints, codeCodePoints);
+              guess.setGame(game);
+              return guessRepository.save(guess);
+            })
+        .orElseThrow(); //if optional object present, then returns it, otherwise throws an error
+  }
+
+  private void computeMatches(Guess guess, int[] guessCodePoints, int[] codeCodePoints) {
+    //TODO: compute exact matches and near matches and use setters of guess to set these values
+    //guess.setExactMatches();
+    //guess.setNearMatches();
+  }
+
+  private int[] preprocessGuess(Guess guess, Game game) {
+    if (game.isSolved()) {
+      throw new IllegalStateException("Game is already solved.");
+    }
+    Set<Integer> poolCodePoints = game
+        .getPool()
+        .codePoints()
+        .boxed()
+        .collect(Collectors.toSet());
+    int[] guessCodePoints = guess
+        .getText()
+        .codePoints()
+        .toArray();
+    if (guessCodePoints.length != game.getLength()) {
+      throw new IllegalArgumentException(String.format("Guess must have the same length (%d) as the secret code.", game.getLength()));
+    }
+    if (IntStream.of(guessCodePoints)
+        .anyMatch((codePoint) -> !poolCodePoints.contains(codePoint))) {
+      throw new IllegalArgumentException(String.format("Guess may only contain the characters in the pool \"%s\"", game.getPool()));
+    }
+    return guessCodePoints;
+  }
+
+  //about failing, not stripping
   private int[] preprocess(String pool) {
     //turn string into stream of unicode codepoints
     return pool
         .codePoints()
         .peek((codePoint) -> {
           if (!Character.isDefined(codePoint)) {
-            throw new IllegalArgumentException(String.format("Undefined character in pool: %d", codePoint));
+            throw new IllegalArgumentException(
+                String.format("Undefined character in pool: %d", codePoint));
           } else if (Character.isWhitespace(codePoint)) {
-            throw new IllegalArgumentException(String.format("Whitespace character in pool: %d", codePoint));
+            throw new IllegalArgumentException(
+                String.format("Whitespace character in pool: %d", codePoint));
           }
         })
         .sorted() //ascending numerical order
         .distinct()
         .toArray();
-        //.takeWhile((codePoint) -> Character.isDefined(codePoint) &&
-          //  !Character.isWhitespace(codePoint))
+    //.takeWhile((codePoint) -> Character.isDefined(codePoint) &&
+    //  !Character.isWhitespace(codePoint))
   }
 
   private String generateCode(int[] codePoints, int length) {
