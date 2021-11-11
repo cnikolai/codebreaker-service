@@ -5,6 +5,9 @@ import edu.cnm.deepdive.codebreaker.model.dao.GuessRepository;
 import edu.cnm.deepdive.codebreaker.model.entity.Game;
 import edu.cnm.deepdive.codebreaker.model.entity.Guess;
 import edu.cnm.deepdive.codebreaker.model.entity.User;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -60,7 +63,7 @@ public class GameService {
     return gameRepository.save(game);
   }
 
-  public Guess processGuess(UUID gameKey, Guess guess, User user) {
+  public Guess processGuess(UUID gameKey, Guess guess, User user) throws IllegalArgumentException, IllegalStateException, NoSuchElementException {
     //if there is no game with this id belonging to this user
     return gameRepository
         .findByExternalKeyAndUser(gameKey, user)
@@ -71,10 +74,7 @@ public class GameService {
               //is the guess the wrong length?
               //does the guess have any characters that aren't in the pool?
               int[] guessCodePoints = preprocessGuess(guess, game);
-              int[] codeCodePoints = game
-                  .getText()
-                  .codePoints()
-                  .toArray();
+              int[] codeCodePoints = getCodePoints(game.getText());
               computeMatches(guess, guessCodePoints, codeCodePoints);
               guess.setGame(game);
               return guessRepository.save(guess);
@@ -83,27 +83,44 @@ public class GameService {
   }
 
   private void computeMatches(Guess guess, int[] guessCodePoints, int[] codeCodePoints) {
-    //TODO: compute exact matches and near matches and use setters of guess to set these values
-    //guess.setExactMatches();
-    //guess.setNearMatches();
+    int exactMatches = 0;
+    //codepoint, count of occurrences of codepoint
+    Map<Integer, Integer> guessCodePointCounts = new HashMap<>();
+    Map<Integer, Integer> codeCodePointCounts = new HashMap<>();
+    // Compute exact matches
+    for (int i = 0; i < guessCodePoints.length; i++) {
+      if (guessCodePoints[i] == codeCodePoints[i]) {
+          exactMatches++;
+      } else {
+        guessCodePointCounts.put(guessCodePoints[i],
+            1 + guessCodePointCounts.getOrDefault(guessCodePoints[i], 0));
+        codeCodePointCounts.put(codeCodePoints[i],
+            1 + codeCodePointCounts.getOrDefault(codeCodePoints[i], 0));
+      }
+    }
+    guess.setExactMatches(exactMatches);
+    // Compute near matches
+    int nearMatches = guessCodePointCounts
+        .entrySet()
+        .stream()
+        .mapToInt((entry) -> Math.min(entry.getValue(), codeCodePointCounts.getOrDefault(entry.getKey(),0)))
+        .sum();
+    guess.setNearMatches(nearMatches);
   }
 
   private int[] preprocessGuess(Guess guess, Game game) {
     if (game.isSolved()) {
       throw new IllegalStateException("Game is already solved.");
     }
+    int[] guessCodePoints = getCodePoints(guess.getText());
+    if (guessCodePoints.length != game.getLength()) {
+      throw new IllegalArgumentException(String.format("Guess must have the same length (%d) as the secret code.", game.getLength()));
+    }
     Set<Integer> poolCodePoints = game
         .getPool()
         .codePoints()
         .boxed()
         .collect(Collectors.toSet());
-    int[] guessCodePoints = guess
-        .getText()
-        .codePoints()
-        .toArray();
-    if (guessCodePoints.length != game.getLength()) {
-      throw new IllegalArgumentException(String.format("Guess must have the same length (%d) as the secret code.", game.getLength()));
-    }
     if (IntStream.of(guessCodePoints)
         .anyMatch((codePoint) -> !poolCodePoints.contains(codePoint))) {
       throw new IllegalArgumentException(String.format("Guess may only contain the characters in the pool \"%s\"", game.getPool()));
@@ -138,5 +155,11 @@ public class GameService {
         .limit(length)
         .toArray();
     return new String(code, 0, code.length);
+  }
+
+  private int[] getCodePoints(String source) {
+    return source
+        .codePoints()
+        .toArray();
   }
 }

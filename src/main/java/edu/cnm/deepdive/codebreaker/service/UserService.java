@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
@@ -64,5 +65,10 @@ public class UserService implements Converter<Jwt, UsernamePasswordAuthenticatio
     repository.delete(user);
   }
 
-  
+  public User getCurrentUser() {
+    return (User) SecurityContextHolder
+        .getContext() //gets context of thread on
+        .getAuthentication()
+        .getPrincipal();
+  }
 }

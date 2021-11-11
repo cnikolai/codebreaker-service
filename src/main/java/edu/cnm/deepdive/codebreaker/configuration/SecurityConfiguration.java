@@ -43,7 +43,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS); //stateless security; every request is its own session. Therefore, no session state stored
     http
         .authorizeRequests((auth) ->
-            auth.anyRequest().anonymous()) //any request that comes in to any service is ok. credentials are not anonymous
+            auth.anyRequest().authenticated()) //any request that comes in to any service is ok. credentials are not anonymous
         .oauth2ResourceServer()
         .jwt()
         .jwtAuthenticationConverter(converter);
