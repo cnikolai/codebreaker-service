@@ -1,8 +1,11 @@
 package edu.cnm.deepdive.codebreaker.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +31,8 @@ import org.hibernate.annotations.CreationTimestamp;
     indexes = {
         @Index(columnList = "created") //field names here, not column names
     })
+@JsonInclude(Include.NON_NULL)//if any of the values are not null, include them
+@JsonPropertyOrder(value = {"id", "created", "displayName"})//the order of the items returned - don't have to do this in capstone.
 public class User {
 
   @Id //marks as primary key field
@@ -54,7 +59,7 @@ public class User {
   @Column(nullable = false, updatable = true, unique = true, length = 100)
   private String displayName;
 
-  @OneToMany(mappedBy = "user", fetch = FetchType.LAZY,
+  @OneToMany(mappedBy = "user", fetch = FetchType.EAGER,
       cascade = CascadeType.ALL, orphanRemoval = true) //mappedBy = specify the field where this relationship was defined (the field where defined the foreign key and ...)
   @OrderBy("created DESC") //when you do a query, here is the order we would like you to use.
   @JsonIgnore
