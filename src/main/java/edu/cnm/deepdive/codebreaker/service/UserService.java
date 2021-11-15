@@ -24,7 +24,7 @@ public class UserService implements Converter<Jwt, UsernamePasswordAuthenticatio
     this.repository = repository;
   }
 
-  @Override
+  @Override //every request presents a bearer token and that gets validated on every request.
   public UsernamePasswordAuthenticationToken convert(Jwt source) {//jwt source totally validated as input here
     Collection<SimpleGrantedAuthority> grants =
         Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"));
@@ -70,5 +70,12 @@ public class UserService implements Converter<Jwt, UsernamePasswordAuthenticatio
         .getContext() //gets context of thread on
         .getAuthentication()
         .getPrincipal();
+  }
+
+  public User update(User updatedUser, User user) {
+    if (updatedUser.getDisplayName() != null) {
+      user.setDisplayName(updatedUser.getDisplayName());
+    }
+    return save(user);
   }
 }

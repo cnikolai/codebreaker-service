@@ -1,5 +1,8 @@
 package edu.cnm.deepdive.codebreaker.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,10 +34,12 @@ public class User {
   @GeneratedValue //autogenerates value for us, can only go on a primary key.
   @Column(name = "user_id", updatable = false, columnDefinition = "UUID")
   //if we ever use hybernate to try to update this field, gives an error, tell hybernamet what datatype it is
+  @JsonIgnore//Jackson api (faster xml)
   private UUID id;
 
   @Column(updatable = false, nullable = false, unique = true, columnDefinition = "UUID")
   //automatically generates lower snake case field (note: room doesn't do this, hybernate does)
+  @JsonProperty(value = "id", access = Access.READ_ONLY)
   private UUID externalKey = UUID.randomUUID(); //default value
 
   @CreationTimestamp
@@ -43,6 +48,7 @@ public class User {
   private Date created;
 
   @Column(nullable = false, updatable = false, unique = true, length = 30)
+  @JsonIgnore
   private String oauthKey; //OAuth
 
   @Column(nullable = false, updatable = true, unique = true, length = 100)
@@ -51,6 +57,7 @@ public class User {
   @OneToMany(mappedBy = "user", fetch = FetchType.LAZY,
       cascade = CascadeType.ALL, orphanRemoval = true) //mappedBy = specify the field where this relationship was defined (the field where defined the foreign key and ...)
   @OrderBy("created DESC") //when you do a query, here is the order we would like you to use.
+  @JsonIgnore
   private final List<Game> games = new LinkedList<>(); //when retrieve a user, looking up a list of games by that user
 
   public UUID getId() {
