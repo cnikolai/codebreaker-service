@@ -147,6 +147,12 @@ public class GameService {
     //  !Character.isWhitespace(codePoint))
   }
 
+  public Optional<Guess> getGuess(UUID gameKey, UUID guessKey, User user) {
+    return gameRepository
+        .findByExternalKeyAndUser(gameKey, user)
+        .flatMap((game) -> guessRepository.findByGameAndExternalKey(game, guessKey));
+  }
+
   private String generateCode(int[] codePoints, int length) {
     //secure random performance not great
     int[] code = IntStream.generate(() -> codePoints[rng.nextInt(codePoints.length)])
