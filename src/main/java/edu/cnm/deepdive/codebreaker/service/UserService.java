@@ -2,6 +2,7 @@ package edu.cnm.deepdive.codebreaker.service;
 
 import edu.cnm.deepdive.codebreaker.model.dao.UserRepository;
 import edu.cnm.deepdive.codebreaker.model.entity.User;
+import edu.cnm.deepdive.codebreaker.view.ScoreSummary;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -93,5 +94,13 @@ public class UserService implements Converter<Jwt, UsernamePasswordAuthenticatio
       user.setDisplayName(updatedUser.getDisplayName());
     }
     return save(user);
+  }
+
+  public Iterable<ScoreSummary> getRankingStatisticsByGuessCount(int length, int poolSize) {
+    return repository.getScoreSummariesOrderByGuessCount(length, poolSize);
+  }
+
+  public Iterable<ScoreSummary> getRankingStatisticsByTime(int length, int poolSize) {
+    return repository.getScoreSummariesOrderByTime(length, poolSize);
   }
 }
