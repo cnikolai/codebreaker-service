@@ -54,4 +54,39 @@ public interface UserRepository extends JpaRepository<User, UUID> { //Spring Dat
   @Query(value = RANKING_STATISTICS_QUERY + "ORDER BY averageTime ASC, averageGuessCount ASC",
       nativeQuery = true)
   Iterable<ScoreSummary> getScoreSummariesOrderByTime(int length, int poolSize);
+
+//  @Query(value = "SELECT u.user_id, u.display_name as displayName, u.external_key as externalKey, gs.averageGuessCount, gs.averageTime FROM "
+//      + "user_profile AS u "
+//      + "INNER JOIN ("
+//      + "  SELECT g.user_id, AVG(total_guesses) AS averageGuessCount, AVG(DATEDIFF(MILLISECOND, gu.last_guess, gu.first_guess)) AS averageTime "
+//      + "  FROM game AS g "
+//      + "  INNER JOIN ("
+//      + "    SELECT "
+//      + "      game_id, "
+//      + "      COUNT(*) AS total_guesses, "
+//      + "      MIN(created) AS st_guess, "
+//      + "      MAX(created) AS last_guess, "
+//      + "      MAX(exact_matches) AS match_count "
+//      + "    FROM guess "
+//      + "    GROUP BY game_id"
+//      + "  ) AS gu ON gu.game_id = g.game_id "
+//      + "  WHERE "
+//      + "    g.length = :length AND g.pool_size = :poolSize "
+//      + "    AND gu.match_count = g.length"
+//      + "   GROUP BY g.user_id"
+//      + ") AS gs ON gs.user_id = u.user_id "
+//      , nativeQuery = true) //jpl query before turned into SQL query
+//  Iterable<ScoreSummary> getScoreSummaries(int length, int poolSize);
+//
+//  interface ScoreSummary {
+//
+//    String getDisplayName();
+//
+//    UUID getExternalKey();
+//
+//    double getAverageGuessCount();
+//
+//    long getAverageTime();
+//
+//  }
 }
